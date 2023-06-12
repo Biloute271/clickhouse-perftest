@@ -14,6 +14,7 @@ import (
 )
 
 var config Config
+var results []int64
 
 func main() {
 	stanlog.SetLogLevelDebug()
@@ -28,6 +29,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.GET("/:policy/:recordscount", launchBench)
+	r.GET("/batch/:policy/:recordscount/:iterations", launchBatch)
 	stanlog.Info("Starting Webserver")
 	stanlog.Debug("Gin mode : " + gin.Mode())
 	r.Run("0.0.0.0:8080") // 0.0.0.0 instead of localhost necessary for Docker
@@ -41,7 +43,30 @@ func launchBench(c *gin.Context) {
 		c.JSON(400, gin.H{"Error": "Incorrect format of records count"})
 		return
 	}
+	c.String(200, "Insertion request received. Please consult log for results.")
 	insertRecords(count, policy)
+}
+
+func launchBatch(c *gin.Context) {
+	stanlog.Info("received request for " + c.Param("iterations") + " iterations of inserting " + c.Param("recordscount") + " records on " + c.Param("policy") + " storage")
+	policy := c.Param("policy")
+	count, err := strconv.Atoi(c.Param("recordscount"))
+	if err != nil {
+		c.JSON(400, gin.H{"Error": "Incorrect format of records count"})
+		return
+	}
+	iterations, err := strconv.Atoi(c.Param("iterations"))
+	if err != nil {
+		c.JSON(400, gin.H{"Error": "Incorrect format of records count"})
+		return
+	}
+	c.String(200, "Batch insertion request received. Please consult log for results.")
+	results = nil
+	for i := 0; i < iterations; i++ {
+		insertRecords(count, policy)
+	}
+	stanlog.Info("Results contain " + strconv.Itoa(len(results)) + " elements of " + c.Param("recordscount") + " records written to " + c.Param("policy"))
+	stanlog.Info("Values : " + fmt.Sprint(results))
 }
 
 func connect() (driver.Conn, error) {
@@ -116,6 +141,7 @@ func insertRecords(nbrecords int, storagePolicy string) {
 	}
 	stop := time.Now()
 	diff := stop.Sub(start)
+	results = append(results, diff.Milliseconds())
 
 	stanlog.Info("Inserted " + strconv.Itoa(nbrecords) + " records on " + storagePolicy + " storage in " + strconv.FormatInt(diff.Milliseconds(), 10) + " milliseconds")
 }

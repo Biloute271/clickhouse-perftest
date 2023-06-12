@@ -2,6 +2,6 @@ app:
   loglevel: INFO
 clickhouse:
   server: ip_address
-  port: 9010
-  login: to-define
-  password: to_define
+  port: port_number
+  login: login
+  password: password
