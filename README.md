@@ -1,13 +1,13 @@
-# ABSTRACT
-The purpose of this piece of code is to compare Clickhouse performances on S3 VS usual NAS storage.
+# Abstract
+The purpose of this piece of code is to compare Clickhouse performances on several kinds of storage.
 
-# DISCLAIMER
+# Disclaimer
 This glorious software has been written in "Quick and Dirty" mode, without any pretentions. It just does the job.
 
-# WHAT IS DOES
+# What it does
 It launches a webserver with REST API and waits for HTTP GET command. The rest command creates a table named "perftest" (if it doesn't exsist) using TableMerge engine. Then the API call inserts several JSON records into this database. Table structure is quite simple: it contains a timestamp (always the same, that doesn't matter) and a JSON structure with workstation name and user name. User name us formatted as "user "+<iteration>. Workstation name is formatted ad "wks"+<iteration>
 
-# CONFIGURATION
+# Configuration
 ## Clickhouse
 Clickhouse has to be configured with 2 storages:
 - S3 : S3 disk. This disk is targeted with a specific storage policy.
@@ -21,12 +21,12 @@ Settings are the following :
 - clickhouse/login : login of Clickhouse connection
 - clickhouse/password : password of Clickhouse connection
 
-# USAGE
+# Usage
 ## Golang nerd mode
 go run *.go
 
 ## Docker mode
-docker run -p 8080:8080 -v <your_yaml_file>:/config.yaml sdmitriev/chbench:latest
+docker run -p 8080:8080 -v <your_yaml_file>:/bin/config.yaml sdmitriev/chbench:latest
 
 ## When it is launched
 When the piece of software is launched (dockerised or purely local) it can be used with curl, httpie, postman or even a simple browser. The url is :
