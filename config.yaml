@@ -1,7 +1,7 @@
 app:
-  loglevel: DEBUG
+  loglevel: INFO
 clickhouse:
-  server: 192.168.1.12
+  server: ip_address
   port: 9010
-  login: test01
-  password: test01
+  login: to-define
+  password: to_define

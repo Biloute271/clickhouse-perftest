@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
+	"time"
 
 	stanlog "github.com/Biloute271/stan-log"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/gin-gonic/gin"
 )
 
 var config Config
@@ -20,31 +23,25 @@ func main() {
 		log.Fatal(err)
 	}
 
-	conn, err := connect()
+	// insertRecords(1000, "nas")
+	// insertRecords(1000, "s3_main")
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	r.GET("/:policy/:recordscount", launchBench)
+	stanlog.Info("Starting Webserver")
+	stanlog.Debug("Gin mode : " + gin.Mode())
+	r.Run("0.0.0.0:8080") // 0.0.0.0 instead of localhost necessary for Docker
+}
+
+func launchBench(c *gin.Context) {
+	stanlog.Info("received request for inserting " + c.Param("recordscount") + " records on " + c.Param("policy") + " storage")
+	policy := c.Param("policy")
+	count, err := strconv.Atoi(c.Param("recordscount"))
 	if err != nil {
-		panic((err))
+		c.JSON(400, gin.H{"Error": "Incorrect format of records count"})
+		return
 	}
-
-	ctx := context.Background()
-	rows, err := conn.Query(ctx, "SELECT name,toString(uuid) as uuid_str FROM system.tables LIMIT 5")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for rows.Next() {
-		var (
-			name, uuid string
-		)
-		if err := rows.Scan(
-			&name,
-			&uuid,
-		); err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("name: %s, uuid: %s",
-			name, uuid)
-	}
-
+	insertRecords(count, policy)
 }
 
 func connect() (driver.Conn, error) {
@@ -57,7 +54,7 @@ func connect() (driver.Conn, error) {
 					Name    string
 					Version string
 				}{
-					{Name: "an-example-go-client", Version: "0.1"},
+					{Name: "Perf Test", Version: "0.1"},
 				},
 			},
 
@@ -78,4 +75,47 @@ func connect() (driver.Conn, error) {
 		return nil, err
 	}
 	return conn, nil
+}
+
+func insertRecords(nbrecords int, storagePolicy string) {
+	conn, err := connect()
+	if err != nil {
+		stanlog.Critical(err.Error())
+	}
+
+	tableName := "perftest"
+	ctx := context.Background()
+	conn.Exec(ctx, `DROP TABLE IF EXISTS `+tableName)
+	err = conn.Exec(context.Background(), `
+	CREATE table `+tableName+`
+	(
+		"@timestamp" Int32 EPHEMERAL 0,
+		data Nested(machine String, user String),
+		timestamp    DateTime DEFAULT toDateTime("@timestamp")
+	) ENGINE = MergeTree() ORDER BY (timestamp)	SETTINGS storage_policy = '`+storagePolicy+`'
+	`)
+	if err != nil {
+		stanlog.Error(err.Error())
+		return
+	}
+	stanlog.Info("Table " + tableName + " created with storagePolicy " + storagePolicy)
+
+	conn.Exec(ctx, `SET input_format_import_nested_json = 1;`)
+
+	stanlog.Info("Inserting " + strconv.Itoa(nbrecords) + " records")
+	start := time.Now()
+	for i := 0; i < nbrecords; i++ {
+		err = conn.Exec(ctx, `
+		INSERT INTO `+tableName+` ("@timestamp", data.machine, data.user)
+		FORMAT JSONEachRow
+			{"@timestamp":897819077, "data":{"machine":["wks `+strconv.Itoa(i)+`"], "user":["usr `+strconv.Itoa(i)+`"] }}
+		`)
+		if err != nil {
+			stanlog.Error("Error in iteration " + strconv.Itoa(i) + err.Error())
+		}
+	}
+	stop := time.Now()
+	diff := stop.Sub(start)
+
+	stanlog.Info("Inserted " + strconv.Itoa(nbrecords) + " records on " + storagePolicy + " storage in " + strconv.FormatInt(diff.Milliseconds(), 10) + " milliseconds")
 }
