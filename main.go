@@ -108,7 +108,7 @@ func insertRecords(nbrecords int, storagePolicy string) {
 		stanlog.Critical(err.Error())
 	}
 
-	tableName := "perftest"
+	tableName := config.Clickhouse.TableName
 	ctx := context.Background()
 	conn.Exec(ctx, `DROP TABLE IF EXISTS `+tableName)
 	err = conn.Exec(context.Background(), `

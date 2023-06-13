@@ -16,10 +16,11 @@ type Config struct {
 		LogLevel string `yaml:"loglevel"`
 	} `yaml:"app"`
 	Clickhouse struct {
-		Server   string `yaml:"server"`
-		Port     string `yaml:"port"`
-		Login    string `yaml:"login"`
-		Password string `yaml:"password"`
+		Server    string `yaml:"server"`
+		Port      string `yaml:"port"`
+		Login     string `yaml:"login"`
+		Password  string `yaml:"password"`
+		TableName string `yaml:"tablename"`
 	} `yaml:"clickhouse"`
 }
 

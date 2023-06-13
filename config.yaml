@@ -5,3 +5,4 @@ clickhouse:
   port: port_number
   login: login
   password: password
+  tablename: test_table

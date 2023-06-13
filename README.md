@@ -20,6 +20,7 @@ Settings are the following :
 - clickhouse/port : the port of Clickhouse native (not SQL) client
 - clickhouse/login : login of Clickhouse connection
 - clickhouse/password : password of Clickhouse connection
+- clickouhe/tablename : name of the table used for tests
 
 # Usage
 ## Golang nerd mode
